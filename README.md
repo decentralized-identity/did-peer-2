@@ -1,8 +1,45 @@
 # did-peer-2
 
+[![pypi release](https://img.shields.io/pypi/v/did-peer-2)](https://pypi.org/project/did-peer-2/)
+
 A minimal did:peer:2 (and 3) library.
 
 did:peer:2 has (or will soon be) superseded by [did:peer:4](https://github.com/dbluhm/did-peer-4). Even so, we anticipate did:peer:2 being around for at least a while longer. This library is built against the most recent version of the did:peer:2 spec.
+
+## Install
+
+```sh
+pip install did-peer-2
+```
+
+## Usage
+
+```python
+>>> from did_peer_2 import generate, KeySpec, resolve, peer2to3
+>>> keys = [
+...     KeySpec.verification("z6Mkj3PUd1WjvaDhNZhhhXQdz5UnZXmS7ehtx8bsPpD47kKc"),
+...     KeySpec.encryption("z6LSg8zQom395jKLrGiBNruB9MM6V8PWuf2FpEy4uRFiqQBR")
+... ]
+>>> services = [
+...     {
+...         "type": "DIDCommMessaging",
+...         "serviceEndpoint": {
+...             "uri": "http://example.com/didcomm",
+...             "accept": ["didcomm/v2"],
+...             "routingKeys": ["did:example:123456789abcdefghi#key-1"],
+...         },
+...     },
+... ]
+>>> did = generate(keys, services)
+>>> print(did)
+did:peer:2.Vz6Mkj3PUd1WjvaDhNZhhhXQdz5UnZXmS7ehtx8bsPpD47kKc.Ez6LSg8zQom395jKLrGiBNruB9MM6V8PWuf2FpEy4uRFiqQBR.SeyJ0IjoiZG0iLCJzIjp7InVyaSI6Imh0dHA6Ly9leGFtcGxlLmNvbS9kaWRjb21tIiwiYSI6WyJkaWRjb21tL3YyIl0sInIiOlsiZGlkOmV4YW1wbGU6MTIzNDU2Nzg5YWJjZGVmZ2hpI2tleS0xIl19fQ
+>>> resolved = resolve(did)
+>>> assert isinstance(resolved, dict)
+>>> did3 = peer2to3(did)
+>>> print(did3)
+did:peer:3zQmbRvRJgKBuubq8T9VBjrDPTmjb2Ed91f89ekW4gr6aZxa
+
+```
 
 ## DID Peer 2 Specification
 
