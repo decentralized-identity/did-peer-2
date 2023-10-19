@@ -16,10 +16,12 @@ pip install did-peer-2
 
 ```python
 >>> from did_peer_2 import generate, KeySpec, resolve, peer2to3
+>>> # Define keys using KeySpec
 >>> keys = [
 ...     KeySpec.verification("z6Mkj3PUd1WjvaDhNZhhhXQdz5UnZXmS7ehtx8bsPpD47kKc"),
 ...     KeySpec.encryption("z6LSg8zQom395jKLrGiBNruB9MM6V8PWuf2FpEy4uRFiqQBR")
 ... ]
+>>> # Define service objects
 >>> services = [
 ...     {
 ...         "type": "DIDCommMessaging",
@@ -30,11 +32,64 @@ pip install did-peer-2
 ...         },
 ...     },
 ... ]
+>>>
+>>> # Generate the DID
 >>> did = generate(keys, services)
 >>> print(did)
 did:peer:2.Vz6Mkj3PUd1WjvaDhNZhhhXQdz5UnZXmS7ehtx8bsPpD47kKc.Ez6LSg8zQom395jKLrGiBNruB9MM6V8PWuf2FpEy4uRFiqQBR.SeyJ0IjoiZG0iLCJzIjp7InVyaSI6Imh0dHA6Ly9leGFtcGxlLmNvbS9kaWRjb21tIiwiYSI6WyJkaWRjb21tL3YyIl0sInIiOlsiZGlkOmV4YW1wbGU6MTIzNDU2Nzg5YWJjZGVmZ2hpI2tleS0xIl19fQ
+>>>
+>>> # Resolve the DID
 >>> resolved = resolve(did)
+>>> # The resolved document will be a dictionary
 >>> assert isinstance(resolved, dict)
+>>>
+>>> # Let's print it out
+>>> import json
+>>> print(json.dumps(resolved, indent=2))
+{
+  "@context": [
+    "https://www.w3.org/ns/did/v1",
+    "https://w3id.org/security/suites/ed25519-2020/v1",
+    "https://w3id.org/security/suites/x25519-2020/v1"
+  ],
+  "id": "did:peer:2.Vz6Mkj3PUd1WjvaDhNZhhhXQdz5UnZXmS7ehtx8bsPpD47kKc.Ez6LSg8zQom395jKLrGiBNruB9MM6V8PWuf2FpEy4uRFiqQBR.SeyJ0IjoiZG0iLCJzIjp7InVyaSI6Imh0dHA6Ly9leGFtcGxlLmNvbS9kaWRjb21tIiwiYSI6WyJkaWRjb21tL3YyIl0sInIiOlsiZGlkOmV4YW1wbGU6MTIzNDU2Nzg5YWJjZGVmZ2hpI2tleS0xIl19fQ",
+  "verificationMethod": [
+    {
+      "type": "Ed25519VerificationKey2020",
+      "id": "#key-1",
+      "controller": "did:peer:2.Vz6Mkj3PUd1WjvaDhNZhhhXQdz5UnZXmS7ehtx8bsPpD47kKc.Ez6LSg8zQom395jKLrGiBNruB9MM6V8PWuf2FpEy4uRFiqQBR.SeyJ0IjoiZG0iLCJzIjp7InVyaSI6Imh0dHA6Ly9leGFtcGxlLmNvbS9kaWRjb21tIiwiYSI6WyJkaWRjb21tL3YyIl0sInIiOlsiZGlkOmV4YW1wbGU6MTIzNDU2Nzg5YWJjZGVmZ2hpI2tleS0xIl19fQ",
+      "publicKeyMultibase": "z6Mkj3PUd1WjvaDhNZhhhXQdz5UnZXmS7ehtx8bsPpD47kKc"
+    },
+    {
+      "type": "X25519KeyAgreementKey2020",
+      "id": "#key-2",
+      "controller": "did:peer:2.Vz6Mkj3PUd1WjvaDhNZhhhXQdz5UnZXmS7ehtx8bsPpD47kKc.Ez6LSg8zQom395jKLrGiBNruB9MM6V8PWuf2FpEy4uRFiqQBR.SeyJ0IjoiZG0iLCJzIjp7InVyaSI6Imh0dHA6Ly9leGFtcGxlLmNvbS9kaWRjb21tIiwiYSI6WyJkaWRjb21tL3YyIl0sInIiOlsiZGlkOmV4YW1wbGU6MTIzNDU2Nzg5YWJjZGVmZ2hpI2tleS0xIl19fQ",
+      "publicKeyMultibase": "z6LSg8zQom395jKLrGiBNruB9MM6V8PWuf2FpEy4uRFiqQBR"
+    }
+  ],
+  "authentication": [
+    "#key-1"
+  ],
+  "keyAgreement": [
+    "#key-2"
+  ],
+  "service": [
+    {
+      "type": "DIDCommMessaging",
+      "serviceEndpoint": {
+        "uri": "http://example.com/didcomm",
+        "accept": [
+          "didcomm/v2"
+        ],
+        "routingKeys": [
+          "did:example:123456789abcdefghi#key-1"
+        ]
+      },
+      "id": "#service"
+    }
+  ]
+}
+>>> # Let's derive the did:peer:3
 >>> did3 = peer2to3(did)
 >>> print(did3)
 did:peer:3zQmbRvRJgKBuubq8T9VBjrDPTmjb2Ed91f89ekW4gr6aZxa
