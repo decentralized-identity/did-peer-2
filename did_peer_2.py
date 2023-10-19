@@ -42,6 +42,7 @@ class PurposeCode(Enum):
 
     @classmethod
     def key_purposes(cls):
+        """Return a list of purpose codes that correspond to keys."""
         return (
             PurposeCode.assertion,
             PurposeCode.key_agreement,
@@ -52,6 +53,8 @@ class PurposeCode(Enum):
 
 
 class ServiceEncoder:
+    """Encoder for did:peer:2 services."""
+
     common_string_abbreviations = {
         "type": "t",
         "DIDCommMessaging": "dm",
@@ -149,30 +152,37 @@ class KeySpec:
 
     @classmethod
     def assertion(cls, material: str) -> "KeySpec":
+        """Create a key spec for assertion purposes."""
         return cls(PurposeCode.assertion, material)
 
     @classmethod
     def key_agreement(cls, material: str) -> "KeySpec":
+        """Create a key spec for key agreement purposes."""
         return cls(PurposeCode.key_agreement, material)
 
     @classmethod
     def encryption(cls, material: str) -> "KeySpec":
+        """Create a key spec for key agreement purposes."""
         return cls(PurposeCode.key_agreement, material)
 
     @classmethod
     def authentication(cls, material: str) -> "KeySpec":
+        """Create a key spec for authentication purposes."""
         return cls(PurposeCode.authentication, material)
 
     @classmethod
     def verification(cls, material: str) -> "KeySpec":
+        """Create a key spec for authentication purposes."""
         return cls(PurposeCode.authentication, material)
 
     @classmethod
     def capability_invocation(cls, material: str) -> "KeySpec":
+        """Create a key spec for capability invocation purposes."""
         return cls(PurposeCode.capability_invocation, material)
 
     @classmethod
     def capability_delegation(cls, material: str) -> "KeySpec":
+        """Create a key spec for capability delegation purposes."""
         return cls(PurposeCode.capability_delegation, material)
 
     @property
