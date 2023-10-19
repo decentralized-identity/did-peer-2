@@ -39,94 +39,101 @@ class PurposeCode(Enum):
             "D": "capabilityDelegation",
         }[self.value]
 
-
-KeyPurposes = (
-    PurposeCode.assertion,
-    PurposeCode.key_agreement,
-    PurposeCode.authentication,
-    PurposeCode.capability_invocation,
-    PurposeCode.capability_delegation,
-)
-
-
-common_string_abbreviations = {
-    "type": "t",
-    "DIDCommMessaging": "dm",
-    "serviceEndpoint": "s",
-    "routingKeys": "r",
-    "accept": "a",
-}
-
-reverse_common_string_abbreviations = {
-    v: k for k, v in common_string_abbreviations.items()
-}
-
-
-def abbreviate_service(service: Dict[str, Any]) -> Dict[str, Any]:
-    """Recursivley replace common strings with abbreviations.
-
-    This method will replace keys in the service dictionary with their
-    abbreviations as outlined in the Common String Abbreviations. The type of
-    the service will also be abbreviated, if applicable.
-    """
-    service = {common_string_abbreviations.get(k, k): v for k, v in service.items()}
-    if "t" in service:
-        service["t"] = common_string_abbreviations.get(service["t"], service["t"])
-
-    for k, v in service.items():
-        if isinstance(v, dict):
-            service[k] = abbreviate_service(v)
-        if isinstance(v, list):
-            service[k] = [
-                abbreviate_service(e) if isinstance(e, dict) else e for e in v
-            ]
-
-    return service
-
-
-def expand_service(service: Dict[str, Any]) -> Dict[str, Any]:
-    """Reverse the abbreviations in a service dictionary.
-
-    This method will perform the inverse of abbreviate_service, replacing
-    abbreviations with their full string.
-    """
-    service = {
-        reverse_common_string_abbreviations.get(k, k): v for k, v in service.items()
-    }
-    if "type" in service:
-        service["type"] = reverse_common_string_abbreviations.get(
-            service["type"], service["type"]
+    @classmethod
+    def key_purposes(cls):
+        return (
+            PurposeCode.assertion,
+            PurposeCode.key_agreement,
+            PurposeCode.authentication,
+            PurposeCode.capability_invocation,
+            PurposeCode.capability_delegation,
         )
 
-    for k, v in service.items():
-        if isinstance(v, dict):
-            service[k] = expand_service(v)
-        if isinstance(v, list):
-            service[k] = [expand_service(e) if isinstance(e, dict) else e for e in v]
 
-    return service
+class ServiceEncoder:
+    common_string_abbreviations = {
+        "type": "t",
+        "DIDCommMessaging": "dm",
+        "serviceEndpoint": "s",
+        "routingKeys": "r",
+        "accept": "a",
+    }
 
+    reverse_common_string_abbreviations = {
+        v: k for k, v in common_string_abbreviations.items()
+    }
 
-def bytes_to_b64(data: bytes) -> str:
-    """Encode bytes to base64url, without padding."""
-    return urlsafe_b64encode(data).decode("utf-8").rstrip("=")
+    def _abbreviate_service(self, service: Dict[str, Any]) -> Dict[str, Any]:
+        """Recursivley replace common strings with abbreviations.
 
+        This method will replace keys in the service dictionary with their
+        abbreviations as outlined in the Common String Abbreviations. The type of
+        the service will also be abbreviated, if applicable.
+        """
+        service = {
+            self.common_string_abbreviations.get(k, k): v for k, v in service.items()
+        }
+        if "t" in service:
+            service["t"] = self.common_string_abbreviations.get(
+                service["t"], service["t"]
+            )
 
-def b64_to_bytes(data: str) -> bytes:
-    """Decode unpadded base64url to bytes."""
-    return urlsafe_b64decode(data + "=" * (-len(data) % 4))
+        for k, v in service.items():
+            if isinstance(v, dict):
+                service[k] = self._abbreviate_service(v)
+            if isinstance(v, list):
+                service[k] = [
+                    self._abbreviate_service(e) if isinstance(e, dict) else e for e in v
+                ]
 
+        return service
 
-def encode_service(service: Dict[str, Any]) -> str:
-    """Encode a service dictionary into a string."""
-    return bytes_to_b64(
-        json.dumps(abbreviate_service(service), separators=(",", ":")).encode("utf-8")
-    )
+    def _expand_service(self, service: Dict[str, Any]) -> Dict[str, Any]:
+        """Reverse the abbreviations in a service dictionary.
 
+        This method will perform the inverse of abbreviate_service, replacing
+        abbreviations with their full string.
+        """
+        service = {
+            self.reverse_common_string_abbreviations.get(k, k): v
+            for k, v in service.items()
+        }
+        if "type" in service:
+            service["type"] = self.reverse_common_string_abbreviations.get(
+                service["type"], service["type"]
+            )
 
-def decode_service(data: str) -> Dict[str, Any]:
-    """Decode a service string into a dictionary."""
-    return expand_service(json.loads(b64_to_bytes(data).decode("utf-8")))
+        for k, v in service.items():
+            if isinstance(v, dict):
+                service[k] = self._expand_service(v)
+            if isinstance(v, list):
+                service[k] = [
+                    self._expand_service(e) if isinstance(e, dict) else e for e in v
+                ]
+
+        return service
+
+    def _bytes_to_b64(self, data: bytes) -> str:
+        """Encode bytes to base64url, without padding."""
+        return urlsafe_b64encode(data).decode("utf-8").rstrip("=")
+
+    def _b64_to_bytes(self, data: str) -> bytes:
+        """Decode unpadded base64url to bytes."""
+        return urlsafe_b64decode(data + "=" * (-len(data) % 4))
+
+    def encode_service(self, service: Dict[str, Any]) -> str:
+        """Encode a service dictionary into a string."""
+        return self._bytes_to_b64(
+            json.dumps(self._abbreviate_service(service), separators=(",", ":")).encode(
+                "utf-8"
+            )
+        )
+
+    def decode_service(self, data: str) -> Dict[str, Any]:
+        """Decode a service string into a dictionary."""
+        return self._expand_service(
+            json.loads(self._b64_to_bytes(data).decode("utf-8"))
+        )
 
 
 MultibaseEncodedKey = str
@@ -167,23 +174,23 @@ class KeySpec:
     def capability_delegation(cls, material: str) -> "KeySpec":
         return cls(PurposeCode.capability_delegation, material)
 
+    @property
+    def vm_type(self) -> str:
+        """Determine the vm type from the multibase encoded key."""
+        if self.material.startswith("z6Mk"):
+            return "Ed25519VerificationKey2020"
+        if self.material.startswith("z6LS"):
+            return "X25519KeyAgreementKey2020"
+        raise ValueError(f"Unsupported key type: {self.material}")
 
-def multibase_to_vm_type(key: MultibaseEncodedKey) -> str:
-    """Determine the vm type from the multibase encoded key."""
-    if key.startswith("z6Mk"):
-        return "Ed25519VerificationKey2020"
-    if key.startswith("z6LS"):
-        return "X25519KeyAgreementKey2020"
-    raise ValueError(f"Unsupported key type: {key}")
-
-
-def multibase_to_context(key: MultibaseEncodedKey) -> List[str]:
-    """Determine the required context from the multibase encoded key."""
-    if key.startswith("z6Mk"):
-        return ["https://w3id.org/security/suites/ed25519-2020/v1"]
-    if key.startswith("z6LS"):
-        return ["https://w3id.org/security/suites/x25519-2020/v1"]
-    raise ValueError(f"Unsupported key type: {key}")
+    @property
+    def required_contexts(self) -> List[str]:
+        """Determine the required context from the multibase encoded key."""
+        if self.material.startswith("z6Mk"):
+            return ["https://w3id.org/security/suites/ed25519-2020/v1"]
+        if self.material.startswith("z6LS"):
+            return ["https://w3id.org/security/suites/x25519-2020/v1"]
+        raise ValueError(f"Unsupported key type: {self.material}")
 
 
 def generate(keys: Sequence[KeySpec], services: Sequence[Dict[str, Any]]):
@@ -194,9 +201,10 @@ def generate(keys: Sequence[KeySpec], services: Sequence[Dict[str, Any]]):
     Key material in the keys parameter must be multibase encoded keys.
     """
     enocded_keys = "".join([f".{key.purpose.value}{key.material}" for key in keys])
+    service_encoder = ServiceEncoder()
     encoded_services = "".join(
         [
-            f".{PurposeCode.service.value}" + encode_service(service)
+            f".{PurposeCode.service.value}" + service_encoder.encode_service(service)
             for service in services
         ]
     )
@@ -213,21 +221,21 @@ def resolve(did: str) -> Dict[str, Any]:
     document["id"] = did
 
     elements = did.split(".")[1:]
-    print(elements)
-    keys = []
-    services = []
+    keys: List[KeySpec] = []
+    services: List[Dict[str, Any]] = []
+    service_encoder = ServiceEncoder()
     for element in elements:
         purpose = PurposeCode(element[0])
-        if purpose in KeyPurposes:
+        if purpose in PurposeCode.key_purposes():
             keys.append(KeySpec(purpose, element[1:]))
         else:
             assert purpose == PurposeCode.service
-            services.append(decode_service(element[1:]))
+            services.append(service_encoder.decode_service(element[1:]))
 
     additional_contexts = set()
     for index, key in enumerate(keys, start=1):
         verification_method = {
-            "type": multibase_to_vm_type(key.material),
+            "type": key.vm_type,
             "id": f"#key-{index}",
             "controller": did,
             "publicKeyMultibase": key.material,
@@ -236,7 +244,7 @@ def resolve(did: str) -> Dict[str, Any]:
         document.setdefault(key.purpose.to_verification_relationship(), []).append(
             f"#key-{index}"
         )
-        additional_contexts.update(multibase_to_context(key.material))
+        additional_contexts.update(key.required_contexts)
 
     document["@context"].extend(additional_contexts)
 
