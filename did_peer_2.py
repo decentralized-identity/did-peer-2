@@ -247,7 +247,7 @@ def resolve(did: str) -> Dict[str, Any]:
         )
         additional_contexts.update(key.required_contexts)
 
-    document["@context"].extend(additional_contexts)
+    document["@context"].extend(sorted(additional_contexts))
 
     unidentified_index = 0
     for service in services:
