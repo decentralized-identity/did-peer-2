@@ -29,7 +29,8 @@ class PurposeCode(Enum):
     capability_delegation = "D"
     service = "S"
 
-    def to_verification_relationship(self) -> str:
+    @property
+    def verification_relationship(self) -> str:
         """Convert the purpose code to a verification relationship."""
         return {
             "A": "assertionMethod",
@@ -241,7 +242,7 @@ def resolve(did: str) -> Dict[str, Any]:
             "publicKeyMultibase": key.material,
         }
         document.setdefault("verificationMethod", []).append(verification_method)
-        document.setdefault(key.purpose.to_verification_relationship(), []).append(
+        document.setdefault(key.purpose.verification_relationship, []).append(
             f"#key-{index}"
         )
         additional_contexts.update(key.required_contexts)
