@@ -11,7 +11,7 @@ If `numalgo` == `2`, the generation mode is similar to Method 0 (and therefore a
 > [!NOTE]
 > The first iteration of this method left some elements of the encoding and decoding process underspecified. Clarifications have been made to this specification to resolve this. These clarifications will be noted by appending "(clarified)" to the relevant statements.
 
-``` json
+```
 peer-did-method-2 = "did:peer:2" 1*element 
 element = "." ( purposecode transform encnumbasis / service )
 purposecode = "A" / "E" / "V" / "I" / "D" / "S" 
