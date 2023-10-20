@@ -140,7 +140,7 @@ class ServiceEncoder:
         )
 
 
-MultibaseEncodedKey = str
+MultikeyEncodedKey = str
 
 
 @dataclass
@@ -148,7 +148,7 @@ class KeySpec:
     """Key specification for did:peer:2."""
 
     purpose: PurposeCode
-    material: MultibaseEncodedKey
+    material: MultikeyEncodedKey
 
     @classmethod
     def assertion(cls, material: str) -> "KeySpec":
@@ -185,24 +185,6 @@ class KeySpec:
         """Create a key spec for capability delegation purposes."""
         return cls(PurposeCode.capability_delegation, material)
 
-    @property
-    def vm_type(self) -> str:
-        """Determine the vm type from the multibase encoded key."""
-        if self.material.startswith("z6Mk"):
-            return "Ed25519VerificationKey2020"
-        if self.material.startswith("z6LS"):
-            return "X25519KeyAgreementKey2020"
-        raise ValueError(f"Unsupported key type: {self.material}")
-
-    @property
-    def required_contexts(self) -> List[str]:
-        """Determine the required context from the multibase encoded key."""
-        if self.material.startswith("z6Mk"):
-            return ["https://w3id.org/security/suites/ed25519-2020/v1"]
-        if self.material.startswith("z6LS"):
-            return ["https://w3id.org/security/suites/x25519-2020/v1"]
-        raise ValueError(f"Unsupported key type: {self.material}")
-
 
 def generate(keys: Sequence[KeySpec], services: Sequence[Dict[str, Any]]):
     """Generate a did:peer:2 DID from keys and services.
@@ -228,7 +210,10 @@ def resolve(did: str) -> Dict[str, Any]:
         raise ValueError(f"Invalid did:peer:2: {did}")
 
     document = {}
-    document["@context"] = ["https://www.w3.org/ns/did/v1"]
+    document["@context"] = [
+        "https://www.w3.org/ns/did/v1",
+        "https://w3id.org/security/multikey/v1",
+    ]
     document["id"] = did
 
     elements = did.split(".")[1:]
@@ -243,10 +228,9 @@ def resolve(did: str) -> Dict[str, Any]:
             assert purpose == PurposeCode.service
             services.append(service_encoder.decode_service(element[1:]))
 
-    additional_contexts = set()
     for index, key in enumerate(keys, start=1):
         verification_method = {
-            "type": key.vm_type,
+            "type": "Multikey",
             "id": f"#key-{index}",
             "controller": did,
             "publicKeyMultibase": key.material,
@@ -255,9 +239,6 @@ def resolve(did: str) -> Dict[str, Any]:
         document.setdefault(key.purpose.verification_relationship, []).append(
             f"#key-{index}"
         )
-        additional_contexts.update(key.required_contexts)
-
-    document["@context"].extend(sorted(additional_contexts))
 
     unidentified_index = 0
     for service in services:
@@ -268,6 +249,8 @@ def resolve(did: str) -> Dict[str, Any]:
                 service["id"] = f"#service-{unidentified_index}"
             unidentified_index += 1
         document.setdefault("service", []).append(service)
+
+    document["alsoKnownAs"] = [peer2to3(did)]
 
     return document
 
