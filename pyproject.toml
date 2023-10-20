@@ -1,6 +1,6 @@
 [project]
 name = "did-peer-2"
-version = "0.1.0.post0"
+version = "0.1.1"
 description = "An implementation of did:peer:2"
 authors = [
     {name = "Daniel Bluhm", email = "dbluhm@pm.me"},
