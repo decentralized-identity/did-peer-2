@@ -6,13 +6,14 @@ from dataclasses import dataclass
 from enum import Enum
 import json
 import re
-from typing import Any, Dict, List, Sequence
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 from hashlib import sha256
 
 
 # Regex
 B58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
-PATTERN = re.compile(rf"^did:peer:2(\.[AEVIDS]z[{B58}]{46}|\.+[A-Za-z0-9_-]+)+$")
+PATTERN = re.compile(rf"^did:peer:2(\.[AEVID]z[{B58}]+|\.S[A-Za-z0-9_-]+)+$")
+PEER3_PATTERN = re.compile(rf"^did:peer:3zQm[{B58}]{{44}}$")
 
 # Multiformats
 MULTIBASE_BASE58_BTC = "z"
@@ -204,29 +205,36 @@ def generate(keys: Sequence[KeySpec], services: Sequence[Dict[str, Any]]):
     return f"did:peer:2{enocded_keys}{encoded_services}"
 
 
-def resolve(did: str) -> Dict[str, Any]:
-    """Resolve a did:peer:2 DID."""
-    if not PATTERN.match(did):
-        raise ValueError(f"Invalid did:peer:2: {did}")
+def _get_elements(did: str) -> Tuple[List[KeySpec], List[Dict[str, Any]]]:
+    """Get the elements of a did:peer:2 DID."""
+    elements = did.split(".")[1:]
 
+    keys: List[KeySpec] = []
+    service_encoder = ServiceEncoder()
+    services: List[Dict[str, Any]] = []
+
+    for element in elements:
+        purpose = PurposeCode(element[0])
+        value = element[1:]
+        if purpose in PurposeCode.key_purposes():
+            keys.append(KeySpec(purpose, value))
+        else:
+            assert purpose == PurposeCode.service
+            services.append(service_encoder.decode_service(value))
+
+    return keys, services
+
+
+def _elements_to_document(
+    did: str, keys: List[KeySpec], services: List[Dict[str, Any]]
+):
+    """Construct a DID Document from the given did, keys, and services."""
     document = {}
     document["@context"] = [
         "https://www.w3.org/ns/did/v1",
         "https://w3id.org/security/multikey/v1",
     ]
     document["id"] = did
-
-    elements = did.split(".")[1:]
-    keys: List[KeySpec] = []
-    services: List[Dict[str, Any]] = []
-    service_encoder = ServiceEncoder()
-    for element in elements:
-        purpose = PurposeCode(element[0])
-        if purpose in PurposeCode.key_purposes():
-            keys.append(KeySpec(purpose, element[1:]))
-        else:
-            assert purpose == PurposeCode.service
-            services.append(service_encoder.decode_service(element[1:]))
 
     for index, key in enumerate(keys, start=1):
         verification_method = {
@@ -250,6 +258,16 @@ def resolve(did: str) -> Dict[str, Any]:
             unidentified_index += 1
         document.setdefault("service", []).append(service)
 
+    return document
+
+
+def resolve(did: str) -> Dict[str, Any]:
+    """Resolve a did:peer:2 DID."""
+    if not PATTERN.match(did):
+        raise ValueError(f"Invalid did:peer:2: {did}")
+
+    keys, services = _get_elements(did)
+    document = _elements_to_document(did, keys, services)
     document["alsoKnownAs"] = [peer2to3(did)]
 
     return document
@@ -262,3 +280,27 @@ def peer2to3(did: str) -> str:
 
     raw = MULTIHASH_SHA256 + sha256(did[10:].encode()).digest()
     return "did:peer:3" + MULTIBASE_BASE58_BTC + b58encode(raw).decode()
+
+
+def resolve_peer3(peer2: str, peer3: Optional[str] = None) -> Dict[str, Any]:
+    """Resolve a did:peer:3 document from a did:peer:2 DID."""
+    if not PATTERN.match(peer2):
+        raise ValueError(f"Invalid did:peer:2: {peer2}")
+
+    if peer3 is None:
+        peer3 = peer2to3(peer2)
+    else:
+        if not PEER3_PATTERN.match(peer3):
+            raise ValueError(f"Invalid did:peer:3: {peer3}")
+
+        computed = peer2to3(peer2)
+        if computed != peer3:
+            raise ValueError(
+                f"did:peer:3 did does not match computed did: {peer3} != {computed}"
+            )
+
+    keys, services = _get_elements(peer2)
+    document = _elements_to_document(peer3, keys, services)
+    document["alsoKnownAs"] = [peer2]
+
+    return document
