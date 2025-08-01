@@ -136,9 +136,7 @@ class ServiceEncoder:
 
     def decode_service(self, data: str) -> Dict[str, Any]:
         """Decode a service string into a dictionary."""
-        return self._expand_service(
-            json.loads(self._b64_to_bytes(data).decode("utf-8"))
-        )
+        return self._expand_service(json.loads(self._b64_to_bytes(data).decode("utf-8")))
 
 
 MultikeyEncodedKey = str
@@ -225,9 +223,7 @@ def _get_elements(did: str) -> Tuple[List[KeySpec], List[Dict[str, Any]]]:
     return keys, services
 
 
-def _elements_to_document(
-    did: str, keys: List[KeySpec], services: List[Dict[str, Any]]
-):
+def _elements_to_document(did: str, keys: List[KeySpec], services: List[Dict[str, Any]]):
     """Construct a DID Document from the given did, keys, and services."""
     document = {}
     document["@context"] = [
